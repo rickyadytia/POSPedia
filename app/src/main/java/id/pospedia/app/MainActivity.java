@@ -110,13 +110,15 @@ public class MainActivity extends AppCompatActivity {
         price.setInputType(InputType.TYPE_CLASS_NUMBER);cost.setInputType(InputType.TYPE_CLASS_NUMBER);stock.setInputType(InputType.TYPE_CLASS_NUMBER);
         if(product!=null){name.setText(product.name);sku.setText(product.sku);category.setText(product.category);price.setText(String.valueOf(product.price));stock.setText(String.valueOf(product.stock));sku.setEnabled(false);barcode.setEnabled(false);cost.setEnabled(false);}
         for(EditText e:new EditText[]{name,sku,barcode,category,price,cost,stock}){form.addView(e);form.addView(spacer(8));}
-        new AlertDialog.Builder(this).setTitle(product==null?"Tambah Produk":"Edit Produk").setView(form).setNegativeButton("Batal",null).setPositiveButton("Simpan",null).create().setOnShowListener(x->{AlertDialog d=(AlertDialog)x;d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{try{
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(product==null?"Tambah Produk":"Edit Produk").setView(form).setNegativeButton("Batal",null).setPositiveButton("Simpan",null).create();
+        dialog.setOnShowListener(x->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{try{
             String n=name.getText().toString().trim(),s=sku.getText().toString().trim(),cat=category.getText().toString().trim();long pr=Long.parseLong(price.getText().toString());int st=Integer.parseInt(stock.getText().toString());
             if(n.isEmpty()||cat.isEmpty()||(product==null&&s.isEmpty())){toast("Nama, SKU dan kategori wajib diisi");return;}
             if(product==null){long co=cost.getText().toString().isEmpty()?0:Long.parseLong(cost.getText().toString());repo.addProduct(session.tenant(),session.outlet(),s,barcode.getText().toString().trim(),n,cat,pr,co,st);}
             else repo.updateProduct(session.tenant(),product.id,n,pr,st);
-            d.dismiss();renderProducts();
-        }catch(Exception e){toast("Harga dan stok harus berupa angka");}});}).show();
+            dialog.dismiss();renderProducts();
+        }catch(Exception e){toast("Harga dan stok harus berupa angka");}}));
+        dialog.show();
     }
     private void renderMore(){content.addView(text("Lainnya",25,DARK,true));LinearLayout profile=card(Color.WHITE);profile.addView(text("Cashier Demo",18,DARK,true));profile.addView(text(session.email()+"\nTenant: "+session.tenant()+"\nOutlet: "+session.outlet()+"\nRole: CASHIER",13,MUTED,false));content.addView(profile);for(String m:new String[]{"Kategori","Customer","Inventory & Low Stock","Laporan Penjualan","Tenant & Outlet","Users & Permission","Printer 58mm / 80mm","Settings","Tentang POSPedia • v0.1.0"}){TextView x=text(m+"  ›",16,DARK,false);x.setPadding(dp(8),dp(15),dp(8),dp(15));x.setOnClickListener(v->{String m2=((TextView)v).getText().toString();if(m2.startsWith("Kategori"))renderCategories();else if(m2.startsWith("Customer"))renderCustomers();else if(m2.startsWith("Inventory"))renderInventory();else if(m2.startsWith("Laporan"))renderReports();});content.addView(x);}Button logout=button("Logout",0xfffee2e2);logout.setTextColor(0xffb91c1c);logout.setOnClickListener(v->{session.logout();cart.clear();showLogin();});content.addView(logout);}
     private void renderCategories(){content.removeAllViews();content.addView(text("Kategori",25,DARK,true));for(String s:repo.categories(session.tenant()))content.addView(text("• "+s,16,DARK,false));EditText n=input("Nama kategori baru");content.addView(n);Button b=button("Tambah Kategori",GREEN);b.setOnClickListener(v->{if(!n.getText().toString().trim().isEmpty()){repo.addCategory(session.tenant(),n.getText().toString().trim());renderCategories();}});content.addView(b);}
