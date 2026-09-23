@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private void showShell(String screen){
         root=vertical();root.setBackgroundColor(BG);LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(dp(20),dp(14),dp(20),dp(12));header.setBackgroundColor(Color.WHITE);
         LinearLayout brand=vertical();brand.addView(text("POSPedia",22,GREEN,true));brand.addView(text("Demo Store • Outlet Utama",11,MUTED,false));header.addView(brand,new LinearLayout.LayoutParams(0,dp(56),1));header.addView(text("●",26,GREEN,false));root.addView(header);
-        ScrollView scroll=new ScrollView(this);content=vertical();content.setPadding(dp(18),dp(18),dp(18),dp(28));scroll.addView(content);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        ScrollView scroll=new ScrollView(this);content=vertical();content.setPadding(dp(20),dp(22),dp(20),dp(32));scroll.addView(content);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         nav=horizontal();nav.setGravity(Gravity.CENTER);nav.setPadding(dp(4),dp(5),dp(4),dp(5));nav.setBackgroundColor(Color.WHITE);
         addNav("⌂\nBeranda","home",screen);addNav("▣\nPOS","pos",screen);addNav("□\nProduk","products",screen);addNav("↻\nTransaksi","transactions",screen);addNav("•••\nLainnya","more",screen);root.addView(nav,new LinearLayout.LayoutParams(-1,dp(68)));setContentView(root);
         switch(screen){case"pos":renderPos("");break;case"products":renderProducts();break;case"transactions":renderTransactions();break;case"more":renderMore();break;default:renderHome();}
@@ -84,7 +84,40 @@ public class MainActivity extends AppCompatActivity {
     }
     private void renderTransactions(){content.addView(text("Riwayat Transaksi",25,DARK,true));content.addView(text("Tersimpan offline dan terisolasi per tenant/outlet.",13,MUTED,false));content.addView(spacer(12));renderRecent(100);}
     private void renderRecent(int limit){int n=0;for(String[] t:repo.transactions(session.tenant(),session.outlet())){if(n++>=limit)break;LinearLayout c=card(Color.WHITE);c.addView(text(t[0],15,DARK,true));c.addView(text(t[3]+" • "+t[4]+" item",12,MUTED,false));c.addView(text(Money.idr(Long.parseLong(t[2])),17,GREEN,true));content.addView(c);content.addView(spacer(8));}if(n==0)content.addView(text("Belum ada transaksi.",14,MUTED,false));}
-    private void renderProducts(){content.addView(text("Produk",25,DARK,true));content.addView(text("Katalog tenant "+session.tenant(),13,MUTED,false));content.addView(spacer(12));for(Product p:repo.products(session.tenant(),session.outlet(),"")){LinearLayout c=card(Color.WHITE);c.addView(text(p.name,16,DARK,true));c.addView(text(p.sku+" • "+p.category+" • Stok "+p.stock,12,MUTED,false));c.addView(text(Money.idr(p.price),15,GREEN,true));content.addView(c);content.addView(spacer(8));}TextView note=text("Tambah/edit/deactivate produk akan diaktifkan pada fase API/admin.",12,MUTED,false);content.addView(note);}
+    private void renderProducts(){
+        content.removeAllViews();
+        LinearLayout titleRow=horizontal();LinearLayout title=vertical();title.addView(text("Produk",25,DARK,true));title.addView(text("Kelola katalog • "+session.tenant()+" / "+session.outlet(),12,MUTED,false));titleRow.addView(title,new LinearLayout.LayoutParams(0,-2,1));
+        Button add=button("+ Produk",GREEN);add.setOnClickListener(v->showProductForm(null));titleRow.addView(add,new LinearLayout.LayoutParams(dp(112),dp(48)));content.addView(titleRow);content.addView(spacer(14));
+        EditText search=input("Cari nama / SKU / barcode");content.addView(search);Button find=button("Cari",0xffe2e8f0);find.setTextColor(DARK);find.setOnClickListener(v->renderProductResults(search.getText().toString()));content.addView(find);content.addView(spacer(8));
+        renderProductResults("");
+    }
+    private void renderProductResults(String query){
+        while(content.getChildCount()>4)content.removeViewAt(4);
+        List<Product> products=repo.products(session.tenant(),session.outlet(),query);
+        if(products.isEmpty()){LinearLayout empty=card(Color.WHITE);empty.setGravity(Gravity.CENTER);empty.addView(text("Belum ada produk",17,DARK,true));empty.addView(text("Tambahkan produk pertama untuk mulai berjualan.",13,MUTED,false));content.addView(empty);return;}
+        for(Product p:products){
+            LinearLayout box=card(Color.WHITE);LinearLayout top=horizontal();LinearLayout info=vertical();
+            info.addView(text(p.name,17,DARK,true));info.addView(text(p.sku+"  •  "+p.category,12,MUTED,false));info.addView(text(Money.idr(p.price),17,GREEN,true));top.addView(info,new LinearLayout.LayoutParams(0,-2,1));
+            TextView stock=text("Stok "+p.stock,12,p.stock<=5?0xffb45309:GREEN,true);stock.setPadding(dp(10),dp(7),dp(10),dp(7));stock.setBackground(round(p.stock<=5?0xfffff7ed:0xffecfdf5,16));top.addView(stock);box.addView(top);
+            LinearLayout actions=horizontal();Button edit=button("Edit",0xffe2e8f0);edit.setTextColor(DARK);Button deactivate=button("Nonaktifkan",0xffffe4e6);deactivate.setTextColor(0xffbe123c);
+            edit.setOnClickListener(v->showProductForm(p));deactivate.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Nonaktifkan produk?").setMessage(p.name+" tidak akan tampil lagi di POS.").setNegativeButton("Batal",null).setPositiveButton("Nonaktifkan",(d,w)->{repo.deactivateProduct(session.tenant(),p.id);renderProducts();}).show());
+            actions.addView(edit,new LinearLayout.LayoutParams(0,dp(46),1));actions.addView(spacerHorizontal(8));actions.addView(deactivate,new LinearLayout.LayoutParams(0,dp(46),1));box.addView(spacer(8));box.addView(actions);content.addView(box);content.addView(spacer(10));
+        }
+    }
+    private void showProductForm(Product product){
+        LinearLayout form=vertical();form.setPadding(dp(18),dp(4),dp(18),0);
+        EditText name=input("Nama produk"),sku=input("SKU"),barcode=input("Barcode"),category=input("Kategori"),price=input("Harga jual"),cost=input("Harga modal"),stock=input("Stok");
+        price.setInputType(InputType.TYPE_CLASS_NUMBER);cost.setInputType(InputType.TYPE_CLASS_NUMBER);stock.setInputType(InputType.TYPE_CLASS_NUMBER);
+        if(product!=null){name.setText(product.name);sku.setText(product.sku);category.setText(product.category);price.setText(String.valueOf(product.price));stock.setText(String.valueOf(product.stock));sku.setEnabled(false);barcode.setEnabled(false);cost.setEnabled(false);}
+        for(EditText e:new EditText[]{name,sku,barcode,category,price,cost,stock}){form.addView(e);form.addView(spacer(8));}
+        new AlertDialog.Builder(this).setTitle(product==null?"Tambah Produk":"Edit Produk").setView(form).setNegativeButton("Batal",null).setPositiveButton("Simpan",null).create().setOnShowListener(x->{AlertDialog d=(AlertDialog)x;d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{try{
+            String n=name.getText().toString().trim(),s=sku.getText().toString().trim(),cat=category.getText().toString().trim();long pr=Long.parseLong(price.getText().toString());int st=Integer.parseInt(stock.getText().toString());
+            if(n.isEmpty()||cat.isEmpty()||(product==null&&s.isEmpty())){toast("Nama, SKU dan kategori wajib diisi");return;}
+            if(product==null){long co=cost.getText().toString().isEmpty()?0:Long.parseLong(cost.getText().toString());repo.addProduct(session.tenant(),session.outlet(),s,barcode.getText().toString().trim(),n,cat,pr,co,st);}
+            else repo.updateProduct(session.tenant(),product.id,n,pr,st);
+            d.dismiss();renderProducts();
+        }catch(Exception e){toast("Harga dan stok harus berupa angka");}});}).show();
+    }
     private void renderMore(){content.addView(text("Lainnya",25,DARK,true));LinearLayout profile=card(Color.WHITE);profile.addView(text("Cashier Demo",18,DARK,true));profile.addView(text(session.email()+"\nTenant: "+session.tenant()+"\nOutlet: "+session.outlet()+"\nRole: CASHIER",13,MUTED,false));content.addView(profile);for(String m:new String[]{"Kategori","Customer","Inventory & Low Stock","Laporan Penjualan","Tenant & Outlet","Users & Permission","Printer 58mm / 80mm","Settings","Tentang POSPedia • v0.1.0"}){TextView x=text(m+"  ›",16,DARK,false);x.setPadding(dp(8),dp(15),dp(8),dp(15));x.setOnClickListener(v->{String m2=((TextView)v).getText().toString();if(m2.startsWith("Kategori"))renderCategories();else if(m2.startsWith("Customer"))renderCustomers();else if(m2.startsWith("Inventory"))renderInventory();else if(m2.startsWith("Laporan"))renderReports();});content.addView(x);}Button logout=button("Logout",0xfffee2e2);logout.setTextColor(0xffb91c1c);logout.setOnClickListener(v->{session.logout();cart.clear();showLogin();});content.addView(logout);}
     private void renderCategories(){content.removeAllViews();content.addView(text("Kategori",25,DARK,true));for(String s:repo.categories(session.tenant()))content.addView(text("• "+s,16,DARK,false));EditText n=input("Nama kategori baru");content.addView(n);Button b=button("Tambah Kategori",GREEN);b.setOnClickListener(v->{if(!n.getText().toString().trim().isEmpty()){repo.addCategory(session.tenant(),n.getText().toString().trim());renderCategories();}});content.addView(b);}
     private void renderCustomers(){content.removeAllViews();content.addView(text("Customer",25,DARK,true));for(String[] a:repo.customers(session.tenant())){LinearLayout x=card(Color.WHITE);x.addView(text(a[1],16,DARK,true));x.addView(text((a[2]==null?"":a[2])+"  "+(a[3]==null?"":a[3]),12,MUTED,false));content.addView(x);content.addView(spacer(6));}Button b=button("+ Tambah Customer",GREEN);b.setOnClickListener(v->{EditText n=input("Nama customer");new AlertDialog.Builder(this).setTitle("Customer Baru").setView(n).setPositiveButton("Simpan",(d,w)->{if(!n.getText().toString().trim().isEmpty()){repo.addCustomer(session.tenant(),n.getText().toString().trim(),"","");renderCustomers();}}).setNegativeButton("Batal",null).show();});content.addView(b);}
@@ -93,13 +126,13 @@ public class MainActivity extends AppCompatActivity {
     private void summary(LinearLayout parent,long total){LinearLayout c=card(Color.WHITE);c.addView(text("Subtotal   "+Money.idr(total)+"\nDiskon      "+Money.idr(0)+"\nPajak        "+Money.idr(0),14,MUTED,false));c.addView(text("Total         "+Money.idr(total),19,DARK,true));parent.addView(c);}
     private int cartQty(){int n=0;for(CartItem i:cart)n+=i.qty;return n;} private long cartTotal(){long n=0;for(CartItem i:cart)n+=i.subtotal();return n;}
     private LinearLayout quick(String icon,String name,Runnable r){LinearLayout c=card(Color.WHITE);c.setGravity(Gravity.CENTER);c.addView(text(icon,26,GREEN,true));c.addView(text(name,13,DARK,true));c.setOnClickListener(v->r.run());LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(92),1);p.setMargins(dp(4),dp(4),dp(4),dp(4));c.setLayoutParams(p);return c;}
-    private LinearLayout card(int color){LinearLayout l=vertical();l.setPadding(dp(18),dp(16),dp(18),dp(16));l.setBackground(round(color,18));return l;}
+    private LinearLayout card(int color){LinearLayout l=vertical();l.setPadding(dp(18),dp(18),dp(18),dp(18));l.setBackground(round(color,20));return l;}
     private GradientDrawable round(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));if(color==Color.WHITE)d.setStroke(dp(1),0xffe2e8f0);return d;}
     private EditText input(String hint){EditText e=new EditText(this);e.setHint(hint);e.setTextColor(DARK);e.setHintTextColor(0xff94a3b8);e.setTextSize(15);e.setSingleLine(true);e.setPadding(dp(14),0,dp(14),0);e.setBackground(round(Color.WHITE,14));e.setLayoutParams(new LinearLayout.LayoutParams(-1,dp(54)));return e;}
     private Button button(String s,int color){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextColor(Color.WHITE);b.setTextSize(14);b.setBackground(round(color,14));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(52));p.setMargins(0,dp(5),0,dp(5));b.setLayoutParams(p);return b;}
     private TextView label(String s){TextView t=text(s,11,MUTED,true);t.setPadding(2,0,0,6);return t;}
     private TextView text(String s,float size,int color,boolean bold){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);if(bold)t.setTypeface(null,1);return t;}
-    private Space spacer(int h){Space s=new Space(this);s.setLayoutParams(new LinearLayout.LayoutParams(1,dp(h)));return s;}
+    private Space spacer(int h){Space s=new Space(this);s.setLayoutParams(new LinearLayout.LayoutParams(1,dp(h)));return s;}private Space spacerHorizontal(int w){Space s=new Space(this);s.setLayoutParams(new LinearLayout.LayoutParams(dp(w),1));return s;}
     private LinearLayout vertical(){LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);return l;}private LinearLayout horizontal(){LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.HORIZONTAL);return l;}
     private int dp(int v){return (int)(v*getResources().getDisplayMetrics().density+.5f);}private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
 }
