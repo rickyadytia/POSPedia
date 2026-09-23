@@ -26,12 +26,19 @@ public class MainActivity extends AppCompatActivity {
         new Handler(Looper.getMainLooper()).postDelayed(()->{if(session.loggedIn()) showShell("home"); else showLogin();},900);
     }
     private void showLogin(){
-        ScrollView sv=new ScrollView(this); root=vertical();root.setPadding(dp(28),dp(54),dp(28),dp(28));root.setBackgroundColor(BG);sv.addView(root);
-        root.addView(text("POSPedia",32,GREEN,true));root.addView(spacer(26));root.addView(text("Selamat Datang 👋",28,DARK,true));root.addView(text("Masuk untuk mulai melayani pelanggan.",15,MUTED,false));root.addView(spacer(28));
-        EditText tenant=input("Tenant Code");tenant.setText("DEMO");EditText email=input("Email");email.setText("cashier@demo.id");EditText pass=input("Password");pass.setText("demo");pass.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        root.addView(label("TENANT"));root.addView(tenant);root.addView(spacer(14));root.addView(label("EMAIL"));root.addView(email);root.addView(spacer(14));root.addView(label("PASSWORD"));root.addView(pass);root.addView(spacer(20));
-        Button login=button("Masuk ke POSPedia",GREEN);root.addView(login);root.addView(spacer(12));Button google=button("Login dengan Google — segera hadir",0xffe2e8f0);google.setTextColor(MUTED);google.setEnabled(false);root.addView(google);
-        login.setOnClickListener(v->{String t=tenant.getText().toString().trim(),e=email.getText().toString().trim(),p=pass.getText().toString();if(t.isEmpty()||e.isEmpty()||p.isEmpty()){toast("Lengkapi data login");return;}if(!t.equalsIgnoreCase("DEMO")||!e.equalsIgnoreCase("cashier@demo.id")||!p.equals("demo")){toast("Gunakan akun demo yang tersedia");return;}chooseOutlet(t,e);});setContentView(sv);
+        ScrollView sv=new ScrollView(this);root=vertical();root.setGravity(Gravity.CENTER_HORIZONTAL);root.setPadding(dp(24),dp(42),dp(24),dp(24));root.setBackgroundColor(0xfffbfcff);sv.addView(root);
+        ImageView mark=new ImageView(this);mark.setImageResource(R.drawable.pospedia_logo);mark.setScaleType(ImageView.ScaleType.CENTER_INSIDE);root.addView(mark,new LinearLayout.LayoutParams(dp(132),dp(132)));
+        TextView brand=text("POSPedia",34,DARK,true);brand.setGravity(Gravity.CENTER);root.addView(brand);
+        TextView tagline=text("Smart POS for Growing Business",14,MUTED,false);tagline.setGravity(Gravity.CENTER);root.addView(tagline);root.addView(spacer(34));
+        EditText email=input("✉   Email");email.setText("cashier@demo.id");root.addView(email);root.addView(spacer(12));
+        EditText pass=input("▣   Password");pass.setText("demo");pass.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);root.addView(pass);
+        TextView forgot=text("Lupa Password?",14,0xff2563eb,true);forgot.setGravity(Gravity.END);forgot.setPadding(0,dp(14),0,dp(16));forgot.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Lupa Password").setMessage("Reset password online akan tersedia setelah backend authentication diaktifkan. Untuk UAT gunakan password: demo").setPositiveButton("OK",null).show());root.addView(forgot);
+        Button login=button("Login",GREEN);root.addView(login);root.addView(spacer(18));
+        LinearLayout divider=horizontal();TextView line1=text("────────",12,0xff94a3b8,false),or=text("  Atau Dengan  ",14,MUTED,false),line2=text("────────",12,0xff94a3b8,false);divider.setGravity(Gravity.CENTER);divider.addView(line1);divider.addView(or);divider.addView(line2);root.addView(divider);root.addView(spacer(12));
+        Button google=button("G   Google",Color.WHITE);google.setTextColor(DARK);GradientDrawable gb=round(Color.WHITE,24);gb.setStroke(dp(1),0xff0ea5e9);google.setBackground(gb);google.setOnClickListener(v->toast("Google Login akan aktif setelah OAuth credential dikonfigurasi"));root.addView(google);
+        TextView register=text("Belum punya akun?  Daftar Sekarang!",14,DARK,false);register.setGravity(Gravity.CENTER);register.setPadding(0,dp(24),0,0);register.setOnClickListener(v->toast("Registrasi tenant akan tersedia pada onboarding cloud"));root.addView(register);root.addView(spacer(90));
+        TextView version=text("v0.1.0 (1)",12,MUTED,false);version.setGravity(Gravity.CENTER);root.addView(version);
+        login.setOnClickListener(v->{String e=email.getText().toString().trim(),p=pass.getText().toString();if(e.isEmpty()||p.isEmpty()){toast("Lengkapi email dan password");return;}if(!e.equalsIgnoreCase("cashier@demo.id")||!p.equals("demo")){toast("Gunakan akun demo yang tersedia");return;}chooseOutlet("DEMO",e);});setContentView(sv);
     }
     private void chooseOutlet(String tenant,String email){new AlertDialog.Builder(this).setTitle("Pilih Outlet").setItems(new String[]{"Outlet Utama"},(d,w)->{session.login(tenant.toUpperCase(),email,"OUTLET-01");showShell("home");}).setNegativeButton("Batal",null).show();}
     private void showShell(String screen){
