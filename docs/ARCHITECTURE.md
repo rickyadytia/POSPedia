@@ -25,3 +25,16 @@ The receipt presentation is structured for a 58mm thermal-printer adapter. Bluet
 Tenant: DEMO
 Email: cashier@demo.id
 Password: demo
+
+
+## Expanded MVP modules
+- Role model: PLATFORM_ADMIN, TENANT_OWNER, TENANT_ADMIN, OUTLET_MANAGER, CASHIER.
+- Catalog: product/category persistence, SKU/barcode-ready schema, active/deactivate architecture.
+- Inventory: stock deduction on completed sales, adjustment/history schema, low-stock query.
+- Customers: tenant-scoped local customer records.
+- Payments: Cash, QRIS, Bank Transfer, Debit Card, Credit Card, Other enum plus provider interface for future gateway adapters.
+- Reports: local daily summary and payment-method aggregation.
+- Receipt: 58mm/80mm paper abstraction prepared for printer adapters.
+
+## Production boundaries
+Google OAuth, remote password reset, QRIS/card acquiring, cloud synchronization, Bluetooth printer transport, platform administration and server-enforced authorization require external services/credentials and are not simulated as successful integrations in the offline UAT build.
